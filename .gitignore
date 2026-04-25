@@ -1,3 +1,8 @@
 *
 !index.html
 !.gitignore
+!.nojekyll
+!manifest.webmanifest
+!sw.js
+!icons/
+!icons/**

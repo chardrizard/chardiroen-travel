@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Travel dashboard icon</title>
+  <desc id="desc">A dark rounded app icon with a minimal route line between two travel points.</desc>
+  <rect width="1024" height="1024" fill="#111111"/>
+  <rect x="88" y="88" width="848" height="848" rx="176" fill="#1C1C1E"/>
+  <path d="M287 598C379 430 515 635 628 466C663 414 705 379 756 358" fill="none" stroke="#F5F5F7" stroke-width="52" stroke-linecap="round"/>
+  <circle cx="268" cy="632" r="92" fill="#0A84FF"/>
+  <circle cx="268" cy="632" r="35" fill="#F5F5F7"/>
+  <circle cx="780" cy="342" r="92" fill="#30D158"/>
+  <circle cx="780" cy="342" r="35" fill="#111111"/>
+  <path d="M410 332h142c28 0 50 22 50 50v96H360v-96c0-28 22-50 50-50Z" fill="#2C2C2E"/>
+  <path d="M398 478h216c29 0 53 24 53 53v130H345V531c0-29 24-53 53-53Z" fill="#242426"/>
+  <path d="M395 566h222" stroke="#8E8E93" stroke-width="28" stroke-linecap="round"/>
+  <path d="M395 640h136" stroke="#8E8E93" stroke-width="28" stroke-linecap="round"/>
+  <path d="M438 332h86v-35c0-21-17-38-38-38h-10c-21 0-38 17-38 38v35Z" fill="#3A3A3C"/>
+</svg>
