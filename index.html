@@ -1,0 +1,2919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111111">
+<title>Trips · Richard + Jeroen</title>
+<style>
+  :root {
+    --bg: #111111;
+    --bg-card: #1C1C1E;
+    --bg-elevated: #242426;
+    --border: rgba(255,255,255,0.07);
+    --border-strong: rgba(255,255,255,0.12);
+    --text-primary: #F5F5F7;
+    --text-secondary: #8E8E93;
+    --text-tertiary: #555558;
+    --accent-green: #30D158;
+    --accent-amber: #FF9F0A;
+    --accent-red: #FF453A;
+    --accent-blue: #0A84FF;
+    --accent-teal: #32ADE6;
+    --accent-purple: #BF5AF2;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+    --font-mono: "SF Mono", "Monaco", "Menlo", monospace;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ── Layout ── */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    height: 100dvh;
+  }
+
+  .header {
+    padding: calc(var(--safe-top) + 12px) 16px 0;
+    background: var(--bg);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .trip-selector {
+    display: flex;
+    gap: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 0;
+  }
+
+  .trip-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .trip-tab .flag { font-size: 16px; }
+  .trip-tab .trip-name { font-size: 12px; }
+
+  .trip-tab.active {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(72px + var(--safe-bottom));
+  }
+
+  /* ── Trip panels ── */
+  .trip-panel { display: none; padding: 12px 16px; }
+  .trip-panel.active { display: block; }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(56px + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+    background: rgba(17,17,17,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .nav-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-family: var(--font);
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 4px;
+    transition: color 0.15s;
+  }
+
+  .nav-btn svg { width: 22px; height: 22px; }
+  .nav-btn.active { color: var(--accent-blue); }
+
+  /* ── Section views ── */
+  .section-view { display: none; }
+  .section-view.active { display: block; }
+
+  /* ── Trip header ── */
+  .trip-header {
+    padding: 16px 0 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .trip-title { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+  .trip-dates { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+  .countdown-badge {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .countdown-badge .days {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .countdown-badge .label { font-size: 10px; color: var(--text-secondary); margin-top: 1px; }
+  .countdown-badge.urgent .days { color: var(--accent-amber); }
+  .countdown-badge.soon .days { color: var(--accent-green); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .card-title { font-size: 15px; font-weight: 600; }
+  .card-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+  .status-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+
+  .status-confirmed { background: rgba(48,209,88,0.15); color: var(--accent-green); }
+  .status-pending { background: rgba(255,159,10,0.15); color: var(--accent-amber); }
+  .status-unbooked { background: rgba(255,69,58,0.15); color: var(--accent-red); }
+
+  /* ── Info rows ── */
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-row:first-child { padding-top: 0; }
+
+  .info-label { font-size: 12px; color: var(--text-secondary); flex-shrink: 0; }
+  .info-value { font-size: 13px; text-align: right; font-weight: 500; }
+  .info-value.mono { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.5px; }
+
+  /* ── Flight card ── */
+  .flight-route {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  .airport {
+    flex: 1;
+    text-align: center;
+  }
+
+  .airport-code {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    font-family: var(--font-mono);
+  }
+
+  .airport-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .flight-arrow {
+    flex: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: var(--text-tertiary);
+    min-width: 60px;
+  }
+
+  .flight-line {
+    width: 100%;
+    height: 1px;
+    background: var(--border-strong);
+    position: relative;
+  }
+
+  .flight-line::before, .flight-line::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-tertiary);
+  }
+
+  .flight-line::before { left: 0; }
+  .flight-line::after { right: 0; }
+
+  .flight-num { font-size: 11px; color: var(--text-secondary); font-family: var(--font-mono); }
+
+  /* ── Warning banner ── */
+  .warning-banner {
+    background: rgba(255,159,10,0.1);
+    border: 1px solid rgba(255,159,10,0.3);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .warning-banner.urgent {
+    background: rgba(255,69,58,0.1);
+    border-color: rgba(255,69,58,0.3);
+  }
+
+  .warning-banner .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .warning-banner .warn-title { font-size: 14px; font-weight: 600; }
+  .warning-banner .warn-body { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4; }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 14px 0 8px;
+  }
+
+  /* ── Checklist ── */
+  .todo-list { display: flex; flex-direction: column; gap: 2px; }
+
+  .todo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .todo-item:last-child { border-bottom: none; }
+
+  .todo-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .todo-dot.urgent { background: var(--accent-red); }
+  .todo-dot.normal { background: var(--accent-amber); }
+  .todo-dot.low { background: var(--text-tertiary); }
+
+  .todo-text { flex: 1; }
+  .todo-deadline { font-size: 11px; color: var(--text-secondary); }
+
+  /* ── Day plan (accordion) ── */
+  .plan-day {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .plan-day:last-child { border-bottom: none; }
+
+  .plan-day summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 0;
+  }
+
+  .plan-day summary::-webkit-details-marker { display: none; }
+
+  .day-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .day-item:last-child { border-bottom: none; }
+
+  .plan-day .day-item {
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .day-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 36px;
+  }
+
+  .day-num {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .day-weekday { font-size: 10px; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; }
+
+  .day-content { flex: 1; }
+  .day-location { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .day-detail { font-size: 12px; color: var(--text-secondary); line-height: 1.45; }
+
+  .day-toggle {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1;
+    transition: transform 0.2s ease;
+  }
+
+  .plan-day[open] .day-toggle {
+    transform: rotate(90deg);
+    color: var(--text-primary);
+  }
+
+  .day-hotels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .day-chip {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .chip-hotel { background: rgba(10,132,255,0.15); color: var(--accent-blue); }
+  .chip-flight { background: rgba(48,209,88,0.15); color: var(--accent-green); }
+  .chip-transit { background: rgba(191,90,242,0.15); color: var(--accent-purple); }
+  .chip-activity { background: rgba(50,173,230,0.15); color: var(--accent-teal); }
+
+  .day-timeline {
+    padding: 0 0 12px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .time-row {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .time-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    padding-top: 1px;
+  }
+
+  .time-text {
+    font-size: 12px;
+    color: var(--text-primary);
+    line-height: 1.45;
+  }
+
+  .time-note {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    line-height: 1.45;
+  }
+
+  /* ── PIN display ── */
+  .pin-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .pin-label { font-size: 11px; color: var(--text-secondary); }
+
+  .pin-value {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--accent-blue);
+  }
+
+  .conf-value {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Payment tag ── */
+  .payment-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .payment-cash { background: rgba(255,69,58,0.12); color: var(--accent-red); }
+  .payment-card { background: rgba(48,209,88,0.12); color: var(--accent-green); }
+
+  /* ── Info tables ── */
+  .info-section {
+    margin-bottom: 4px;
+  }
+
+  .collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    user-select: none;
+    transition: background 0.15s;
+  }
+
+  .collapsible-header:active { background: var(--bg-elevated); }
+  .collapsible-header .chevron { font-size: 12px; color: var(--text-tertiary); transition: transform 0.2s; }
+  .collapsible-header.open .chevron { transform: rotate(90deg); }
+
+  .collapsible-body {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+
+  .collapsible-body.open { display: block; }
+
+  /* ── Food notes ── */
+  .veg-tag {
+    font-size: 11px;
+    background: rgba(48,209,88,0.12);
+    color: var(--accent-green);
+    padding: 2px 7px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  /* ── Map link ── */
+  .map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .map-link:active { opacity: 0.7; }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  /* ── Visa / practical ── */
+  .visa-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .visa-row:last-child { border-bottom: none; }
+  .visa-flag { font-size: 18px; }
+  .visa-country { font-weight: 600; flex: 1; }
+  .visa-status { font-size: 12px; color: var(--text-secondary); }
+
+  /* ── Budget bar ── */
+  .budget-overview {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .budget-cell {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    text-align: center;
+  }
+
+  .budget-amount { font-size: 16px; font-weight: 700; }
+  .budget-label { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { display: none; }
+
+  /* ── Tablet / desktop adjustments ── */
+  @media (min-width: 600px) {
+    .trip-panel { max-width: 600px; margin: 0 auto; padding: 12px 20px; }
+    .budget-overview { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header: trip selector -->
+  <div class="header">
+    <div class="trip-selector">
+      <button class="trip-tab active" onclick="selectTrip('albania')" id="tab-albania">
+        <span class="flag">🇦🇱</span>
+        <span class="trip-name">Albania · May</span>
+      </button>
+      <button class="trip-tab" onclick="selectTrip('asia')" id="tab-asia">
+        <span class="flag">🌏</span>
+        <span class="trip-name">Asia · Sep</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main content area -->
+  <div class="content-area">
+
+    <!-- ════════════════ ALBANIA ════════════════ -->
+    <div class="trip-panel active" id="trip-albania">
+
+      <!-- Overview section -->
+      <div class="section-view active" id="albania-home">
+
+        <!-- Trip header with countdown -->
+        <div class="trip-header">
+          <div>
+            <div class="trip-title">Albania</div>
+            <div class="trip-dates">15–22 May 2026 · 8 days · 2 people</div>
+          </div>
+          <div class="countdown-badge urgent" id="albania-countdown">
+            <div class="days" id="albania-days">—</div>
+            <div class="label">days away</div>
+          </div>
+        </div>
+
+        <!-- Urgent warning -->
+        <div class="warning-banner urgent">
+          <div class="icon">🔴</div>
+          <div>
+            <div class="warn-title">Sea Horizon — cancel by 2 May</div>
+            <div class="warn-body">Free cancellation expires 2 May 23:59. Full €220.50 charged after. If any plans change to the Saranda leg, act before this date.</div>
+          </div>
+        </div>
+
+        <!-- Cash warning -->
+        <div class="warning-banner">
+          <div class="icon">💶</div>
+          <div>
+            <div class="warn-title">Bring ~€330 cash for hotels</div>
+            <div class="warn-body">Sea Horizon (Saranda) and Venere (Tirana 2) are cash only. Withdraw at Tirana airport ATM on arrival. Albanian Lek or Euros accepted.</div>
+          </div>
+        </div>
+
+        <!-- Budget overview -->
+        <div class="section-label">Budget overview</div>
+        <div class="budget-overview">
+          <div class="budget-cell">
+            <div class="budget-amount">€455</div>
+            <div class="budget-label">Hotels (confirmed)</div>
+          </div>
+          <div class="budget-cell">
+            <div class="budget-amount">~€330</div>
+            <div class="budget-label">Cash needed</div>
+          </div>
+          <div class="budget-cell">
+            <div class="budget-amount">~€1,200</div>
+            <div class="budget-label">Total est. (2pp)</div>
+          </div>
+        </div>
+
+        <!-- To-do list -->
+        <div class="section-label">Still to do</div>
+        <div class="card">
+          <div class="todo-list">
+            <div class="todo-item">
+              <div class="todo-dot urgent"></div>
+              <div class="todo-text">Check Sea Horizon cancellation window</div>
+              <div class="todo-deadline">by 2 May</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot normal"></div>
+              <div class="todo-text">Book Tirana → Saranda bus (gjirafa.com)</div>
+              <div class="todo-deadline">May 17</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot normal"></div>
+              <div class="todo-text">Book Saranda → Tirana bus (gjirafa.com)</div>
+              <div class="todo-deadline">May 20</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot normal"></div>
+              <div class="todo-text">Book Blue Eye + Butrint tour (GetYourGuide, ~€30pp)</div>
+              <div class="todo-deadline">May 18</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot normal"></div>
+              <div class="todo-text">Arrange Gjirokastër transport from Saranda</div>
+              <div class="todo-deadline">May 19</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot low"></div>
+              <div class="todo-text">Travel insurance (both)</div>
+              <div class="todo-deadline"></div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot low"></div>
+              <div class="todo-text">e-SIM for Albania</div>
+              <div class="todo-deadline"></div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot low"></div>
+              <div class="todo-text">Notify bank for Albania</div>
+              <div class="todo-deadline"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end albania-home -->
+
+      <!-- Flights section -->
+      <div class="section-view" id="albania-flights">
+
+        <div class="section-label">Outbound · 15 May 2026</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(48,209,88,0.12);">✈️</div>
+            <div>
+              <div class="card-title">Transavia HV6935</div>
+              <div class="card-subtitle">Part of package booking</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="flight-route">
+            <div class="airport">
+              <div class="airport-code">AMS</div>
+              <div class="airport-time">16:30</div>
+            </div>
+            <div class="flight-arrow">
+              <div class="flight-num">HV6935</div>
+              <div class="flight-line"></div>
+              <div class="flight-num">non-stop</div>
+            </div>
+            <div class="airport">
+              <div class="airport-code">TIA</div>
+              <div class="airport-time">19:10</div>
+            </div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Passengers</span>
+            <span class="info-value">Richard + Jeroen</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Leave Utrecht</span>
+            <span class="info-value">~14:00 (45 min to Schiphol)</span>
+          </div>
+        </div>
+
+      </div><!-- end albania-flights -->
+
+      <!-- Hotels section -->
+      <div class="section-view" id="albania-hotels">
+
+        <!-- Ginger -->
+        <div class="section-label">Tirana 1 · 15–17 May (2 nights)</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(10,132,255,0.12);">🏨</div>
+            <div>
+              <div class="card-title">Ginger Home Studio</div>
+              <div class="card-subtitle">Tirana</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-in</span>
+            <span class="info-value">15 May, from 14:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-out</span>
+            <span class="info-value">17 May, by 10:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Address</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=32+Rruga+Ismail+Qemali+Tirana" target="_blank">32 Rruga Ismail Qemali 📍</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Phone</span>
+            <span class="info-value mono">+355 68 990 0211</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cost</span>
+            <span class="info-value">€127.18</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Payment</span>
+            <span class="info-value"><span class="payment-tag payment-card">💳 Card only</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Free cancel until</span>
+            <span class="info-value">15 May 18:00 (day of arrival)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Booking ref</span>
+            <span class="info-value mono">5345741859</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">PIN</span>
+            <span class="pin-value">7820</span>
+          </div>
+        </div>
+
+        <!-- Sea Horizon -->
+        <div class="section-label">Saranda · 17–20 May (3 nights)</div>
+        <div class="warning-banner urgent" style="margin-bottom:8px;">
+          <div class="icon">⚠️</div>
+          <div>
+            <div class="warn-title">Cash only · Free cancel expires 2 May</div>
+            <div class="warn-body">Full cost non-refundable after 2 May 23:59.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(10,132,255,0.12);">🏨</div>
+            <div>
+              <div class="card-title">Sea Horizon Vsl Suites</div>
+              <div class="card-subtitle">Saranda · Deluxe Suite, Sea View</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-in</span>
+            <span class="info-value">17 May, from 14:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-out</span>
+            <span class="info-value">20 May, by 08:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Address</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Rruga+Mitat+Hoxha+Saranda" target="_blank">Rruga Mitat Hoxha, Sarandë 📍</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Phone</span>
+            <span class="info-value mono">+30 693 678 6409</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cost</span>
+            <span class="info-value">€220.50</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Payment</span>
+            <span class="info-value"><span class="payment-tag payment-cash">💶 Cash only</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Booking ref</span>
+            <span class="info-value mono">6034042421</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">PIN</span>
+            <span class="pin-value">0085</span>
+          </div>
+        </div>
+
+        <!-- Venere -->
+        <div class="section-label">Tirana 2 · 20–23 May (3 nights)</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(10,132,255,0.12);">🏨</div>
+            <div>
+              <div class="card-title">Venere Tirana Suite Deluxe</div>
+              <div class="card-subtitle">Tirana · One-Bedroom Apartment</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-in</span>
+            <span class="info-value">20 May, from 15:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-out</span>
+            <span class="info-value">23 May, by 08:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Address</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Rruga+Bardhok+Biba+Tirana" target="_blank">Rruga Bardhok Biba, Tirana 📍</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Phone</span>
+            <span class="info-value mono">+355 69 44 88 373</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cost</span>
+            <span class="info-value">€108.00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Payment</span>
+            <span class="info-value"><span class="payment-tag payment-cash">💶 Cash only</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Note</span>
+            <span class="info-value">Checkout May 23, flight May 22 — bags can stay</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Free cancel until</span>
+            <span class="info-value">18 May 23:59</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Booking ref</span>
+            <span class="info-value mono">5368855197</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">PIN</span>
+            <span class="pin-value">6561</span>
+          </div>
+        </div>
+
+        <div class="section-label">Return · 22 May 2026</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(48,209,88,0.12);">✈️</div>
+            <div>
+              <div class="card-title">Transavia HV6936</div>
+              <div class="card-subtitle">Part of package booking</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="flight-route">
+            <div class="airport">
+              <div class="airport-code">TIA</div>
+              <div class="airport-time">20:10</div>
+            </div>
+            <div class="flight-arrow">
+              <div class="flight-num">HV6936</div>
+              <div class="flight-line"></div>
+              <div class="flight-num">non-stop</div>
+            </div>
+            <div class="airport">
+              <div class="airport-code">AMS</div>
+              <div class="airport-time">23:00</div>
+            </div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Leave Venere hotel</span>
+            <span class="info-value">By 17:30 latest</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Note</span>
+            <span class="info-value">Hotel checkout May 23 — bags can stay</span>
+          </div>
+        </div>
+
+      </div><!-- end albania-hotels -->
+
+      <!-- Plan section -->
+      <div class="section-view" id="albania-plan">
+
+        <details class="plan-day" open>
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">15</div><div class="day-weekday">Fri</div></div>
+              <div class="day-content">
+                <div class="day-location">Utrecht → Tirana</div>
+                <div class="day-detail">Travel day. Evening arrival + check-in.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-flight">HV6935 16:30→19:10</span>
+                  <span class="day-chip chip-hotel">Ginger Home Studio</span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Blloku+Tirana" target="_blank">Blloku 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">13:45</div><div class="time-text">Leave Utrecht for Schiphol (buffer for check-in).</div></div>
+            <div class="time-row"><div class="time-label">16:30</div><div class="time-text">Flight HV6935 AMS → TIA.</div></div>
+            <div class="time-row"><div class="time-label">19:10</div><div class="time-text">Arrive Tirana, ATM cash withdrawal, transfer to city.</div></div>
+            <div class="time-row"><div class="time-label">20:30</div><div class="time-text">Check in Ginger Home Studio.</div></div>
+            <div class="time-row"><div class="time-label">21:00</div><div class="time-text">Light dinner near <a class="map-link" href="https://en.wikipedia.org/wiki/Blloku" target="_blank">Blloku (Wiki)</a>.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">16</div><div class="day-weekday">Sat</div></div>
+              <div class="day-content">
+                <div class="day-location">Tirana</div>
+                <div class="day-detail">City highlights day with walkable flow.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Skanderbeg+Square+Tirana" target="_blank">Skanderbeg Sq 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=BunkArt+2+Tirana" target="_blank">Bunk'Art 2 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Pazari+i+Ri+Tirana" target="_blank">Pazari i Ri 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Blloku+Tirana" target="_blank">Blloku 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">08:30</div><div class="time-text">Breakfast + short walk to Opera House meet point.</div></div>
+            <div class="time-row"><div class="time-label">10:00</div><div class="time-text">Free walking tour around <a class="map-link" href="https://en.wikipedia.org/wiki/Skanderbeg_Square" target="_blank">Skanderbeg Square (Wiki)</a>.</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text">Lunch at Pazari i Ri (New Bazaar).</div></div>
+            <div class="time-row"><div class="time-label">14:00</div><div class="time-text"><a class="map-link" href="https://bunkart.al/" target="_blank">Bunk'Art 2 (official)</a>.</div></div>
+            <div class="time-row"><div class="time-label">17:00</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Blloku" target="_blank">Blloku (Wiki)</a> stroll + coffee break.</div></div>
+            <div class="time-row"><div class="time-label">19:30</div><div class="time-text">Dinner in Blloku (target dinner window).</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">17</div><div class="day-weekday">Sun</div></div>
+              <div class="day-content">
+                <div class="day-location">Tirana → Saranda</div>
+                <div class="day-detail">Morning cable car + midday intercity bus.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-transit"><a class="map-link" href="https://travel.gjirafa.com/en/bus/tirana-to-sarande" target="_blank">Bus booking ↗</a></span>
+                  <span class="day-chip chip-hotel">Sea Horizon</span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Dajti+Ekspres+Cable+Car+Tirana" target="_blank">Dajti 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Tirana+North+and+South+Bus+Terminal" target="_blank">Bus Terminal 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Saranda+Promenade" target="_blank">Saranda Promenade 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">08:30</div><div class="time-text">Breakfast + check weather for Dajti cable car.</div></div>
+            <div class="time-row"><div class="time-label">09:30</div><div class="time-text"><a class="map-link" href="https://dajtiekspres.com/" target="_blank">Dajti Express (official)</a>.</div></div>
+            <div class="time-row"><div class="time-label">11:15</div><div class="time-text">Back to hotel, pack + check out.</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text">Bus Tirana → Saranda (<a class="map-link" href="https://travel.gjirafa.com/en/bus/tirana-to-sarande" target="_blank">tickets</a>).</div></div>
+            <div class="time-row"><div class="time-label">17:30</div><div class="time-text">Arrive Saranda + check in Sea Horizon.</div></div>
+            <div class="time-row"><div class="time-label">19:30</div><div class="time-text">Seafront dinner + Saranda promenade walk.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">18</div><div class="day-weekday">Mon</div></div>
+              <div class="day-content">
+                <div class="day-location">Saranda · Group Tour Day</div>
+                <div class="day-detail">Butrint + Blue Eye + Ksamil + Lekuresi (easy logistics).</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://www.getyourguide.com/sarande-l122815/saranda-tour-butrint-blue-eye-ksamil-and-lekuresi-castle-t632410/" target="_blank">GetYourGuide ↗</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Butrint+National+Park" target="_blank">Butrint 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Ksamil+Beach+Albania" target="_blank">Ksamil 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Blue+Eye+Albania" target="_blank">Blue Eye 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Lekursi+Castle+Sarande" target="_blank">Lekuresi 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">08:30</div><div class="time-text">Breakfast + meet pickup point.</div></div>
+            <div class="time-row"><div class="time-label">09:00</div><div class="time-text">Tour departs from Saranda (<a class="map-link" href="https://www.getyourguide.com/sarande-l122815/saranda-tour-butrint-blue-eye-ksamil-and-lekuresi-castle-t632410/" target="_blank">GetYourGuide</a>).</div></div>
+            <div class="time-row"><div class="time-label">10:00</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Butrint" target="_blank">Butrint (Wiki)</a>.</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Ksamil" target="_blank">Ksamil (Wiki)</a> free time/lunch.</div></div>
+            <div class="time-row"><div class="time-label">14:30</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Syri_i_Kalt%C3%ABr" target="_blank">Blue Eye (Wiki)</a> stop.</div></div>
+            <div class="time-row"><div class="time-label">16:30</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/L%C3%ABkur%C3%ABsi_Castle" target="_blank">Lekuresi Castle (Wiki)</a> viewpoint.</div></div>
+            <div class="time-row"><div class="time-label">19:30</div><div class="time-text">Dinner in Saranda.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">19</div><div class="day-weekday">Tue</div></div>
+              <div class="day-content">
+                <div class="day-location">Gjirokastër Day Trip</div>
+                <div class="day-detail">City of Stone, castle + bazaar, return same day.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-transit"><a class="map-link" href="https://travel.gjirafa.com/en/bus/saranda-ne-gjirokaster" target="_blank">Bus tickets ↗</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Gjirokaster+Castle" target="_blank">Gjirokaster Castle 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Old+Bazaar+Gjirokaster" target="_blank">Old Bazaar 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">08:30</div><div class="time-text">Breakfast + choose bus or taxi option.</div></div>
+            <div class="time-row"><div class="time-label">09:00</div><div class="time-text">Taxi departure (fastest), or wait for next bus slot.</div></div>
+            <div class="time-row"><div class="time-label">10:15</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Gjirokast%C3%ABr" target="_blank">Gjirokaster (Wiki)</a> old town + castle area.</div></div>
+            <div class="time-row"><div class="time-label">13:00</div><div class="time-text">Lunch in Old Bazaar.</div></div>
+            <div class="time-row"><div class="time-label">15:00</div><div class="time-text">Return to Saranda (<a class="map-link" href="https://travel.gjirafa.com/en/bus/gjirokaster-to-sarande" target="_blank">bus return tickets</a>).</div></div>
+            <div class="time-row"><div class="time-label">19:30</div><div class="time-text">Final Saranda dinner + pack for early bus.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">20</div><div class="day-weekday">Wed</div></div>
+              <div class="day-content">
+                <div class="day-location">Saranda → Tirana</div>
+                <div class="day-detail">Early transfer day back to Tirana.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-transit"><a class="map-link" href="https://travel.gjirafa.com/en/bus/sarande-ne-tirane" target="_blank">Bus booking ↗</a></span>
+                  <span class="day-chip chip-hotel">Venere Tirana</span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Pyramid+of+Tirana" target="_blank">Pyramid 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Blloku+Tirana" target="_blank">Blloku 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">06:45</div><div class="time-text">Checkout + transfer to Saranda station.</div></div>
+            <div class="time-row"><div class="time-label">07:30</div><div class="time-text">Bus Saranda → Tirana (<a class="map-link" href="https://travel.gjirafa.com/en/bus/sarande-ne-tirane" target="_blank">tickets</a>).</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text">Arrive Tirana + lunch nearby.</div></div>
+            <div class="time-row"><div class="time-label">15:00</div><div class="time-text">Check in Venere.</div></div>
+            <div class="time-row"><div class="time-label">17:30</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Pyramid_of_Tirana" target="_blank">Pyramid of Tirana (Wiki)</a> · then Blloku stroll.</div></div>
+            <div class="time-row"><div class="time-label">19:30</div><div class="time-text">Dinner in Tirana.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">21</div><div class="day-weekday">Thu</div></div>
+              <div class="day-content">
+                <div class="day-location">Tirana</div>
+                <div class="day-detail">Krujë or Dajti + museum + farewell dinner.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Kruje+Castle" target="_blank">Krujë 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=House+of+Leaves+Tirana" target="_blank">House of Leaves 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Old+Bazaar+Kruje" target="_blank">Old Bazaar Krujë 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">08:30</div><div class="time-text">Breakfast + depart for Krujë (or Dajti fallback).</div></div>
+            <div class="time-row"><div class="time-label">10:00</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Kruj%C3%AB_Castle" target="_blank">Kruje Castle (Wiki)</a> + Old Bazaar visit.</div></div>
+            <div class="time-row"><div class="time-label">13:00</div><div class="time-text">Lunch back in Tirana.</div></div>
+            <div class="time-row"><div class="time-label">15:00</div><div class="time-text">House of Leaves museum.</div></div>
+            <div class="time-row"><div class="time-label">17:30</div><div class="time-text">Coffee + easy walk in Blloku.</div></div>
+            <div class="time-row"><div class="time-label">19:30</div><div class="time-text">Farewell dinner.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">22</div><div class="day-weekday">Fri</div></div>
+              <div class="day-content">
+                <div class="day-location">Tirana → Amsterdam</div>
+                <div class="day-detail">Final city hours + evening flight home.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-flight">HV6936 20:10→23:00</span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Pazari+i+Ri+Tirana" target="_blank">Pazari i Ri 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Tirana+International+Airport+Nene+Tereza" target="_blank">TIA Airport 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">08:30</div><div class="time-text">Breakfast + relaxed final walk.</div></div>
+            <div class="time-row"><div class="time-label">10:30</div><div class="time-text">Pazari i Ri market / last coffee / small shopping.</div></div>
+            <div class="time-row"><div class="time-label">13:30</div><div class="time-text">Light lunch + collect any remaining cash.</div></div>
+            <div class="time-row"><div class="time-label">17:00</div><div class="time-text">Collect bags + transfer to airport.</div></div>
+            <div class="time-row"><div class="time-label">20:10</div><div class="time-text">Flight HV6936 TIA → AMS.</div></div>
+          </div>
+        </details>
+
+      </div><!-- end albania-plan -->
+
+      <!-- Info section -->
+      <div class="section-view" id="albania-info">
+
+        <div class="section-label">Visa</div>
+        <div class="card">
+          <div class="visa-row">
+            <div class="visa-flag">🇦🇱</div>
+            <div class="visa-country">Albania</div>
+            <div class="visa-status">✅ Visa-free 90 days (NL passport)</div>
+          </div>
+        </div>
+
+        <div class="section-label">Transport</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Airport → Tirana</span>
+            <span class="info-value">Bus ~€4pp or taxi ~€20</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tirana → Saranda</span>
+            <span class="info-value">Bus €16pp · book gjirafa.com · cash only</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Saranda → Tirana</span>
+            <span class="info-value">Bus €16pp · dep 07:30 · ~4–5h</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Gjirokastër from Saranda</span>
+            <span class="info-value">Taxi ~€15pp or bus (last back 14:30)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Within Tirana</span>
+            <span class="info-value">Taxi (negotiate) or walking</span>
+          </div>
+        </div>
+
+        <div class="section-label">Food · Vegetarian</div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <span>🥗 Vegetarian options in Albania</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Byrek</span>
+            <span class="info-value">Spinach or cheese version <span class="veg-tag">🌿 Veg</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tavë kosi</span>
+            <span class="info-value">Yoghurt + egg bake — ask if no meat</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Sallatë</span>
+            <span class="info-value">Tomato/cucumber salads, feta, olives <span class="veg-tag">🌿 Veg</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Raki</span>
+            <span class="info-value">Local grape brandy — offered everywhere</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Markets</span>
+            <span class="info-value">Saranda Old Bazaar: fresh produce, cheese</span>
+          </div>
+        </div>
+
+        <div class="section-label">Practical</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Currency</span>
+            <span class="info-value">Albanian Lek (ALL) · ~1 EUR = 100 ALL</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cash</span>
+            <span class="info-value">Withdraw at Tirana airport ATM on arrival</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Weather</span>
+            <span class="info-value">~22–26°C May · Mediterranean</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Language</span>
+            <span class="info-value">Albanian · English widely spoken in tourism</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Power</span>
+            <span class="info-value">Type C/F (EU standard · no adapter needed)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">e-SIM</span>
+            <span class="info-value">Buy at Tirana airport or city centre</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tipping</span>
+            <span class="info-value">Not expected but appreciated (5–10%)</span>
+          </div>
+        </div>
+
+        <div class="section-label">Key locations</div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <span>🏙️ Tirana</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Skanderbeg Square</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Skanderbeg+Square+Tirana" target="_blank">Map 📍</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Bunk'Art 2</span>
+            <span class="info-value">€4pp · underground bunker museum</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Blloku</span>
+            <span class="info-value">Best bars + cafes district</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Dajti Cable Car</span>
+            <span class="info-value">Closed Tue · ~€8pp return</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">National History Museum</span>
+            <span class="info-value">Closed for renovations until 2028</span>
+          </div>
+        </div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)" style="margin-top:2px;">
+          <span>🌊 Saranda</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Ksamil Beaches</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Ksamil+Beach+Albania" target="_blank">Map 📍</a> · 4 small islands</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Blue Eye spring</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Blue+Eye+Albania" target="_blank">Map 📍</a> · ~€5 entry</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Butrint ruins</span>
+            <span class="info-value">UNESCO site · ~€10 entry</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Gjirokastër</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Gjirokaster+Albania" target="_blank">Map 📍</a> · ~45min taxi</span>
+          </div>
+        </div>
+
+      </div><!-- end albania-info -->
+
+      <!-- Culture section -->
+      <div class="section-view" id="albania-culture">
+
+        <div class="section-label">First-Time Albania Essentials</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Social vibe</span>
+            <span class="info-value">Warm and direct. A friendly greeting goes a long way.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tipping</span>
+            <span class="info-value">Not mandatory, but 5–10% appreciated in restaurants.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cash culture</span>
+            <span class="info-value">Carry small notes for buses, beach spots, and local cafes.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Dress</span>
+            <span class="info-value">Casual is fine; cover shoulders/knees for religious sites.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Water</span>
+            <span class="info-value">Use bottled water in coastal areas to avoid stomach issues.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Road rhythm</span>
+            <span class="info-value">Traffic can be assertive; cross carefully, especially in Tirana.</span>
+          </div>
+        </div>
+
+        <div class="section-label">Useful Albanian Phrases</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Hello</span>
+            <span class="info-value mono">Përshëndetje (per-shen-DEH-tyeh)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Thank you</span>
+            <span class="info-value mono">Faleminderit (fah-leh-min-DEH-rit)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Please</span>
+            <span class="info-value mono">Ju lutem (yoo LOO-tem)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Excuse me</span>
+            <span class="info-value mono">Më falni (muh FAHL-nee)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Yes / No</span>
+            <span class="info-value mono">Po / Jo</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">How much?</span>
+            <span class="info-value mono">Sa kushton? (sah KOOSH-ton)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Bill, please</span>
+            <span class="info-value mono">Llogarinë, ju lutem</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Where is...?</span>
+            <span class="info-value mono">Ku është...? (koo USH-tuh)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">I don't understand</span>
+            <span class="info-value mono">Nuk kuptoj (nook koop-TOY)</span>
+          </div>
+        </div>
+
+        <div class="section-label">Day-to-Day Etiquette</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Cafe rhythm</span>
+            <span class="info-value">Coffee breaks are social time. Slower service is normal, not bad service.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Meal timing</span>
+            <span class="info-value">Lunch starts later and dinners often begin after 19:30, especially in cities.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Restaurant check</span>
+            <span class="info-value">Ask for the bill directly ("llogarinë, ju lutem"), it may not come automatically.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Beach basics</span>
+            <span class="info-value">Many beach clubs charge for umbrella + loungers; confirm price first.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Photography</span>
+            <span class="info-value">Fine in public, but ask before close portraits and avoid military/police sites.</span>
+          </div>
+        </div>
+
+        <div class="section-label">Quick Travel Safety</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Emergency number</span>
+            <span class="info-value mono">112</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Taxi</span>
+            <span class="info-value">Confirm price before ride if meter is unclear.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Bus travel</span>
+            <span class="info-value">Arrive 30–40 min early; schedules can shift.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cards vs cash</span>
+            <span class="info-value">Always keep both. South coast can be cash-heavy.</span>
+          </div>
+        </div>
+
+      </div><!-- end albania-culture -->
+
+    </div><!-- end trip-albania -->
+
+
+    <!-- ════════════════ ASIA ════════════════ -->
+    <div class="trip-panel" id="trip-asia">
+
+      <!-- Overview -->
+      <div class="section-view active" id="asia-home">
+
+        <div class="trip-header">
+          <div>
+            <div class="trip-title">Asia</div>
+            <div class="trip-dates">6 Sep – 29 Sep 2026 · 23 days · 2 people</div>
+          </div>
+          <div class="countdown-badge" id="asia-countdown">
+            <div class="days" id="asia-days">—</div>
+            <div class="label">days away</div>
+          </div>
+        </div>
+
+        <div class="warning-banner urgent">
+          <div class="icon">🔴</div>
+          <div>
+            <div class="warn-title">3 flights still unbooked</div>
+            <div class="warn-body">KUL→PNK (AirAsia), PNK→Tokyo (Batik Air), and KIX→AMS (Vietnam Airlines) need to be booked. KL hotel also unbooked (3 nights).</div>
+          </div>
+        </div>
+
+        <div class="section-label">Hotels status</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">🇲🇾 Kuala Lumpur</span>
+            <span class="info-value"><span class="status-badge status-unbooked">❌ Not booked</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">🇮🇩 Pontianak</span>
+            <span class="info-value"><span class="status-badge status-confirmed">✅ Family</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">🇯🇵 Tokyo</span>
+            <span class="info-value"><span class="status-badge status-confirmed">✅ Confirmed</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">🇯🇵 Kyoto</span>
+            <span class="info-value"><span class="status-badge status-confirmed">✅ Confirmed</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">🇯🇵 Osaka</span>
+            <span class="info-value"><span class="status-badge status-confirmed">✅ Confirmed</span></span>
+          </div>
+        </div>
+
+        <div class="section-label">Budget overview</div>
+        <div class="budget-overview">
+          <div class="budget-cell">
+            <div class="budget-amount">~€2,200</div>
+            <div class="budget-label">Flights (est.)</div>
+          </div>
+          <div class="budget-cell">
+            <div class="budget-amount">~€1,525</div>
+            <div class="budget-label">Hotels (est.)</div>
+          </div>
+          <div class="budget-cell">
+            <div class="budget-amount">~€6,200</div>
+            <div class="budget-label">Total est. (2pp)</div>
+          </div>
+        </div>
+
+        <div class="section-label">Still to do</div>
+        <div class="card">
+          <div class="todo-list">
+            <div class="todo-item">
+              <div class="todo-dot urgent"></div>
+              <div class="todo-text">Book KUL→PNK (AirAsia AK492, ~€46pp)</div>
+              <div class="todo-deadline">Sep 10</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot urgent"></div>
+              <div class="todo-text">Book PNK→Tokyo (Batik Air via KUL, ~€222pp)</div>
+              <div class="todo-deadline">Sep 13</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot urgent"></div>
+              <div class="todo-text">Book KIX→Hanoi→AMS (Vietnam Airlines)</div>
+              <div class="todo-deadline">Sep 28–29</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot urgent"></div>
+              <div class="todo-text">Book KL hotel (Sep 7–10, 3 nights)</div>
+              <div class="todo-deadline">Sep 7</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot normal"></div>
+              <div class="todo-text">Book Hanoi transit hotel (~15h layover)</div>
+              <div class="todo-deadline">Sep 28</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot normal"></div>
+              <div class="todo-text">Buy Shinkansen tickets Tokyo → Kyoto</div>
+              <div class="todo-deadline">Sep 19</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot normal"></div>
+              <div class="todo-text">Book TeamLab Planets Tokyo (sells out!)</div>
+              <div class="todo-deadline"></div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot normal"></div>
+              <div class="todo-text">Book Kinkaku-ji Kyoto (mandatory timed entry)</div>
+              <div class="todo-deadline"></div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot low"></div>
+              <div class="todo-text">Select Etihad seats (ref 8QSVZG)</div>
+              <div class="todo-deadline">Opens 5 Sep 20:55</div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot low"></div>
+              <div class="todo-text">Travel insurance</div>
+              <div class="todo-deadline"></div>
+            </div>
+            <div class="todo-item">
+              <div class="todo-dot low"></div>
+              <div class="todo-text">e-SIM: Malaysia, Indonesia, Japan</div>
+              <div class="todo-deadline"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end asia-home -->
+
+      <!-- Asia flights -->
+      <div class="section-view" id="asia-flights">
+
+        <div class="warning-banner urgent">
+          <div class="icon">🔴</div>
+          <div>
+            <div class="warn-title">Action block: 3 transport bookings pending</div>
+            <div class="warn-body">Book AK492 (10 Sep), Batik PNK→NRT (13 Sep), and VN335+VN83 (28–29 Sep) to lock route continuity.</div>
+          </div>
+        </div>
+
+        <div class="section-label">Outbound · 6–7 Sep · Etihad ✅</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(48,209,88,0.12);">✈️</div>
+            <div>
+              <div class="card-title">Etihad EY42 + EY486</div>
+              <div class="card-subtitle">Ref: 8QSVZG</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="flight-route">
+            <div class="airport">
+              <div class="airport-code">AMS</div>
+              <div class="airport-time">6 Sep 21:55</div>
+            </div>
+            <div class="flight-arrow">
+              <div class="flight-num">EY42</div>
+              <div class="flight-line"></div>
+              <div class="flight-num">A350-1000</div>
+            </div>
+            <div class="airport">
+              <div class="airport-code">AUH</div>
+              <div class="airport-time">7 Sep 06:30</div>
+            </div>
+          </div>
+          <div class="flight-route" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+            <div class="airport">
+              <div class="airport-code">AUH</div>
+              <div class="airport-time">7 Sep 08:25</div>
+            </div>
+            <div class="flight-arrow">
+              <div class="flight-num">EY486</div>
+              <div class="flight-line"></div>
+              <div class="flight-num">787-9</div>
+            </div>
+            <div class="airport">
+              <div class="airport-code">KUL</div>
+              <div class="airport-time">7 Sep 19:45</div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="info-row">
+            <span class="info-label">Booking ref</span>
+            <span class="info-value mono">8QSVZG</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Ticket (Richard)</span>
+            <span class="info-value mono">6072415302728</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Ticket (Jeroen)</span>
+            <span class="info-value mono">6072415302729</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Seats</span>
+            <span class="info-value">Not yet selected — etihad.com</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-in opens</span>
+            <span class="info-value">5 Sep 20:55 (30h before)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Leave Utrecht</span>
+            <span class="info-value">~18:30 (45min + buffer to AMS)</span>
+          </div>
+        </div>
+
+        <div class="section-label">KUL → PNK · 10 Sep ❌</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(255,69,58,0.12);">✈️</div>
+            <div>
+              <div class="card-title">AirAsia AK492</div>
+              <div class="card-subtitle">Kuala Lumpur → Pontianak</div>
+            </div>
+            <div class="status-badge status-unbooked">Not booked</div>
+          </div>
+          <div class="flight-route">
+            <div class="airport">
+              <div class="airport-code">KUL</div>
+              <div class="airport-time">10:00</div>
+            </div>
+            <div class="flight-arrow">
+              <div class="flight-num">AK492</div>
+              <div class="flight-line"></div>
+              <div class="flight-num">~€46pp</div>
+            </div>
+            <div class="airport">
+              <div class="airport-code">PNK</div>
+              <div class="airport-time">10:40</div>
+            </div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Book via</span>
+            <span class="info-value">airasia.com · AK492</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Booking target</span>
+            <span class="info-value">Before 15 Jun to keep lower fare band</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Baggage note</span>
+            <span class="info-value">Add checked bag at booking; airport add-ons cost more</span>
+          </div>
+        </div>
+
+        <div class="section-label">PNK → Tokyo · 13 Sep ❌</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(255,69,58,0.12);">✈️</div>
+            <div>
+              <div class="card-title">Batik Air (via KUL)</div>
+              <div class="card-subtitle">Pontianak → Narita (NRT)</div>
+            </div>
+            <div class="status-badge status-unbooked">Not booked</div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Route</span>
+            <span class="info-value">PNK → KUL → NRT</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Target departure</span>
+            <span class="info-value">13 Sep morning from PNK, evening arrival in Tokyo</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Estimate</span>
+            <span class="info-value">~€222pp</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Connection risk</span>
+            <span class="info-value">If self-transfer in KUL, keep 3h+ buffer and re-check baggage rules</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Booking target</span>
+            <span class="info-value">Buy before 1 Jul to avoid late-summer jump</span>
+          </div>
+        </div>
+
+        <div class="section-label">Tokyo → Kyoto · 19 Sep 🚄</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(255,159,10,0.12);">🚄</div>
+            <div>
+              <div class="card-title">Shinkansen</div>
+              <div class="card-subtitle">Tokyo Station → Kyoto Station</div>
+            </div>
+            <div class="status-badge status-pending">Buy tickets</div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Duration</span>
+            <span class="info-value">~2h 15min</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Train type</span>
+            <span class="info-value">Nozomi is fastest on this route</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cost</span>
+            <span class="info-value">~¥16,000pp (~€100)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Seat strategy</span>
+            <span class="info-value">Reserve seats + oversized luggage space if needed</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Buy via</span>
+            <span class="info-value">SmartEX app or JR ticket office 2–7 days ahead</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Note</span>
+            <span class="info-value">Hotel Keihan checkout 11:00</span>
+          </div>
+        </div>
+
+      </div><!-- end asia-flights -->
+
+      <!-- Asia hotels -->
+      <div class="section-view" id="asia-hotels">
+
+        <div class="section-label">Kuala Lumpur · 7–10 Sep (3 nights)</div>
+        <div class="warning-banner urgent" style="margin-bottom:8px;">
+          <div class="icon">🔴</div>
+          <div>
+            <div class="warn-title">KL hotel not booked</div>
+            <div class="warn-body">Previous booking (Global Star KLCC) was cancelled 21 Apr. Need to book 3 nights Sep 7–10.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Target area</span>
+            <span class="info-value">KL Sentral or Bukit Bintang (easy airport + city access)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Budget target</span>
+            <span class="info-value">~€45–80/night incl. taxes</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Must-have</span>
+            <span class="info-value">24h reception + late check-in after EY486 arrival</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Book by</span>
+            <span class="info-value">End of May to keep strong options near transit lines</span>
+          </div>
+        </div>
+
+        <div class="section-label">Tokyo · 14–19 Sep (5 nights)</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(10,132,255,0.12);">🏨</div>
+            <div>
+              <div class="card-title">Hotel Keihan Asakusa</div>
+              <div class="card-subtitle">Tokyo · Asakusa</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-in</span>
+            <span class="info-value">14 Sep, from 15:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-out</span>
+            <span class="info-value">19 Sep, by 11:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Address</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Hotel+Keihan+Asakusa+Tokyo" target="_blank">Asakusa 2-12-4, Taito 📍</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Phone</span>
+            <span class="info-value mono">+81 3-5830-0321</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cost</span>
+            <span class="info-value">¥78,919 (~€478)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Free cancel until</span>
+            <span class="info-value">10 Sep</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Note</span>
+            <span class="info-value">Arrive Tokyo 13 Sep evening — check-in 14 Sep</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Booking ref</span>
+            <span class="info-value mono">5110214447</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">PIN</span>
+            <span class="pin-value">8885</span>
+          </div>
+        </div>
+
+        <div class="section-label">Kyoto · 19–25 Sep (6 nights)</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(10,132,255,0.12);">🏨</div>
+            <div>
+              <div class="card-title">Henn na Hotel Premier</div>
+              <div class="card-subtitle">Kyoto Gojo Karasuma</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-in</span>
+            <span class="info-value">19 Sep, from 15:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-out</span>
+            <span class="info-value">25 Sep, by 11:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Address</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Henn+na+Hotel+Kyoto+Gojo+Karasuma" target="_blank">Daikokucho 195, Shimogyo-ku 📍</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Phone</span>
+            <span class="info-value mono">+81 50-5210-5333</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cost</span>
+            <span class="info-value">¥97,892 (~€593)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Free cancel until</span>
+            <span class="info-value">17 Sep (typhoon buffer)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Booking ref</span>
+            <span class="info-value mono">6751736315</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">PIN</span>
+            <span class="pin-value">0627</span>
+          </div>
+        </div>
+
+        <div class="section-label">Osaka · 25–28 Sep (3 nights)</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(10,132,255,0.12);">🏨</div>
+            <div>
+              <div class="card-title">WELLSTAY Shinsekai Wakyo</div>
+              <div class="card-subtitle">Osaka · Naniwa Ward</div>
+            </div>
+            <div class="status-badge status-confirmed">Confirmed</div>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-in</span>
+            <span class="info-value">25 Sep, from 15:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Check-out</span>
+            <span class="info-value">28 Sep, by 10:00 — leave by 08:00 for KIX</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Address</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=WELLSTAY+Shinsekai+Wakyo+Osaka" target="_blank">3-16-1 Shimodera, Naniwa Ward 📍</a></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Phone</span>
+            <span class="info-value mono">+81 6-4708-4266</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cost</span>
+            <span class="info-value">¥43,570 (~€264)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Free cancel until</span>
+            <span class="info-value">23 Sep</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Booking ref</span>
+            <span class="info-value mono">6300636895</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">PIN</span>
+            <span class="pin-value">2122</span>
+          </div>
+        </div>
+
+        <div class="section-label">KIX → Hanoi → AMS · 28–29 Sep ❌</div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon" style="background: rgba(255,69,58,0.12);">✈️</div>
+            <div>
+              <div class="card-title">Vietnam Airlines VN335 + VN83</div>
+              <div class="card-subtitle">Placeholder only — not booked</div>
+            </div>
+            <div class="status-badge status-unbooked">Not booked</div>
+          </div>
+          <div class="flight-route">
+            <div class="airport">
+              <div class="airport-code">KIX</div>
+              <div class="airport-time">28 Sep 10:00</div>
+            </div>
+            <div class="flight-arrow">
+              <div class="flight-num">VN335</div>
+              <div class="flight-line"></div>
+              <div class="flight-num">→ Hanoi</div>
+            </div>
+            <div class="airport">
+              <div class="airport-code">HAN</div>
+              <div class="airport-time">28 Sep 13:00</div>
+            </div>
+          </div>
+          <div class="flight-route" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+            <div class="airport">
+              <div class="airport-code">HAN</div>
+              <div class="airport-time">29 Sep 03:50</div>
+            </div>
+            <div class="flight-arrow">
+              <div class="flight-num">VN83</div>
+              <div class="flight-line"></div>
+              <div class="flight-num">→ AMS</div>
+            </div>
+            <div class="airport">
+              <div class="airport-code">AMS</div>
+              <div class="airport-time">29 Sep 11:00</div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="info-row">
+            <span class="info-label">Osaka checkout</span>
+            <span class="info-value">Leave WELLSTAY by 08:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">KIX from Osaka</span>
+            <span class="info-value">JR Haruka from Tennoji (~45 min)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Vietnam visa</span>
+            <span class="info-value">✅ NL passport visa-free 45 days</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Hanoi transit hotel</span>
+            <span class="info-value">~15h layover — still to book</span>
+          </div>
+        </div>
+
+      </div><!-- end asia-hotels -->
+
+      <!-- Asia plan -->
+      <div class="section-view" id="asia-plan">
+
+        <div class="day-item" style="padding-top:16px;">
+          <div class="day-marker"><div class="day-num">6</div><div class="day-weekday">Sun</div></div>
+          <div class="day-content">
+            <div class="day-location">Amsterdam → Abu Dhabi</div>
+            <div class="day-detail">Leave Utrecht ~18:30. EY42 dep AMS 21:55.</div>
+            <div class="day-hotels"><span class="day-chip chip-flight">EY42 21:55</span></div>
+          </div>
+        </div>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">7</div><div class="day-weekday">Mon</div></div>
+          <div class="day-content">
+            <div class="day-location">Abu Dhabi → Kuala Lumpur</div>
+            <div class="day-detail">AUH arr 06:30. EY486 dep 08:25. Land KUL 19:45, clear immigration, then KLIA Ekspres (~28 min) to hotel zone.</div>
+            <div class="day-hotels"><span class="day-chip chip-flight">EY486 → KUL 19:45</span></div>
+          </div>
+        </div>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">8</div><div class="day-weekday">Tue</div></div>
+          <div class="day-content">
+            <div class="day-location">Kuala Lumpur</div>
+            <div class="day-detail">Batu Caves early (cooler hours), Petronas deck timed slot, then Chinatown/Petaling Street. Finish at Jalan Alor for dinner.</div>
+            <div class="day-hotels">
+              <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Batu+Caves+Kuala+Lumpur" target="_blank">Batu Caves 📍</a></span>
+              <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Petronas+Twin+Towers" target="_blank">Petronas 📍</a></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">9</div><div class="day-weekday">Wed</div></div>
+          <div class="day-content">
+            <div class="day-location">Kuala Lumpur</div>
+            <div class="day-detail">Islamic Arts Museum + Merdeka Square at relaxed pace, with buffer for Day 8 overflow. Pack early for next-day flight.</div>
+            <div class="day-hotels"><span class="day-chip chip-flight">AK492 check-in prep</span></div>
+          </div>
+        </div>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">10</div><div class="day-weekday">Thu</div></div>
+          <div class="day-content">
+            <div class="day-location">KL → Pontianak</div>
+            <div class="day-detail">AK492 dep 10:00 / arr 10:40. Airport handoff day, then family time and wedding preparation.</div>
+            <div class="day-hotels"><span class="day-chip chip-flight">AK492 10:00→10:40 ❌</span></div>
+          </div>
+        </div>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">11</div><div class="day-weekday">Fri</div></div>
+          <div class="day-content">
+            <div class="day-location">Pontianak</div>
+            <div class="day-detail">Wedding day flow + family events. Keep schedule light and flexible around ceremony timing.</div>
+            <div class="day-hotels"><span class="day-chip chip-activity">Family day</span></div>
+          </div>
+        </div>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">12</div><div class="day-weekday">Sat</div></div>
+          <div class="day-content">
+            <div class="day-location">Pontianak</div>
+            <div class="day-detail">Wedding + family time. Equator Monument nearby.</div>
+            <div class="day-hotels">
+              <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Equator+Monument+Pontianak" target="_blank">Equator Monument 📍</a></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">13</div><div class="day-weekday">Sun</div></div>
+          <div class="day-content">
+            <div class="day-location">Pontianak → Tokyo</div>
+            <div class="day-detail">Morning departure via KUL to NRT. Aim for same-day evening arrival and low-effort first night before official check-in on Sep 14.</div>
+            <div class="day-hotels"><span class="day-chip chip-flight">Batik Air → NRT ❌</span></div>
+          </div>
+        </div>
+
+        <details class="plan-day" open>
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">14</div><div class="day-weekday">Mon</div></div>
+              <div class="day-content">
+                <div class="day-location">Tokyo (Asakusa Base)</div>
+                <div class="day-detail">Soft landing day around hotel area.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-hotel">Hotel Keihan check-in</span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Hotel+Keihan+Asakusa+Tokyo" target="_blank">Hotel 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Sensoji+Temple+Tokyo" target="_blank">Senso-ji 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">10:30</div><div class="time-text">Drop bags near hotel if room not ready yet.</div></div>
+            <div class="time-row"><div class="time-label">12:00</div><div class="time-text">Nakamise + <a class="map-link" href="https://en.wikipedia.org/wiki/Sens%C5%8D-ji" target="_blank">Senso-ji (Wiki)</a>.</div></div>
+            <div class="time-row"><div class="time-label">15:00</div><div class="time-text">Official check-in at Hotel Keihan Asakusa.</div></div>
+            <div class="time-row"><div class="time-label">17:30</div><div class="time-text">Walk Sumida river side + optional <a class="map-link" href="https://maps.google.com/?q=Tokyo+Skytree" target="_blank">Skytree area 📍</a>.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Asakusa / Kappabashi zone (choose on the day).</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">15</div><div class="day-weekday">Tue</div></div>
+              <div class="day-content">
+                <div class="day-location">Tokyo West Loop</div>
+                <div class="day-detail">Shibuya + Harajuku + Meiji in one efficient arc.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Shibuya+Crossing" target="_blank">Shibuya 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Meiji+Jingu" target="_blank">Meiji Jingu 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">09:00</div><div class="time-text">Metro from Asakusa to Shibuya (~35–40 min).</div></div>
+            <div class="time-row"><div class="time-label">10:00</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Shibuya" target="_blank">Shibuya (Wiki)</a> crossing + district walk.</div></div>
+            <div class="time-row"><div class="time-label">13:00</div><div class="time-text">Harajuku / Takeshita Street, then <a class="map-link" href="https://en.wikipedia.org/wiki/Meiji_Shrine" target="_blank">Meiji Shrine (Wiki)</a>.</div></div>
+            <div class="time-row"><div class="time-label">17:00</div><div class="time-text">Shibuya Sky sunset slot (book timed entry).</div></div>
+            <div class="time-row"><div class="time-label">19:30</div><div class="time-text">Dinner area suggestion: Shibuya Center-Gai / Nonbei Yokocho.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">16</div><div class="day-weekday">Wed</div></div>
+              <div class="day-content">
+                <div class="day-location">Toyosu + Ginza + Shinjuku</div>
+                <div class="day-detail">First-timer Tokyo contrast day.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=teamLab+Planets+Toyosu+Tokyo" target="_blank">TeamLab 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Golden+Gai+Shinjuku" target="_blank">Golden Gai 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">09:30</div><div class="time-text"><a class="map-link" href="https://maps.google.com/?q=teamLab+Planets+Toyosu+Tokyo" target="_blank">TeamLab Planets 📍</a> timed slot (pre-book).</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text">Ginza stroll near <a class="map-link" href="https://en.wikipedia.org/wiki/Ginza" target="_blank">Ginza (Wiki)</a>.</div></div>
+            <div class="time-row"><div class="time-label">16:30</div><div class="time-text">Transit to Shinjuku for night atmosphere.</div></div>
+            <div class="time-row"><div class="time-label">18:30</div><div class="time-text">Walk Omoide Yokocho + Golden Gai lanes.</div></div>
+            <div class="time-row"><div class="time-label">20:00</div><div class="time-text">Dinner area suggestion: Shinjuku (east side, around Golden Gai).</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">17</div><div class="day-weekday">Thu</div></div>
+              <div class="day-content">
+                <div class="day-location">Ueno + Akihabara + Yanaka</div>
+                <div class="day-detail">Efficient east-side day from Asakusa base.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Ueno+Park" target="_blank">Ueno 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Akihabara+Tokyo" target="_blank">Akihabara 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">09:00</div><div class="time-text">Ueno Park + museum cluster (<a class="map-link" href="https://en.wikipedia.org/wiki/Ueno_Park" target="_blank">Wiki</a>).</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text">Lunch break in Ueno/Ameyoko corridor.</div></div>
+            <div class="time-row"><div class="time-label">14:00</div><div class="time-text">Akihabara electronics/arcade block.</div></div>
+            <div class="time-row"><div class="time-label">17:00</div><div class="time-text">Yanaka old-neighborhood walk before return.</div></div>
+            <div class="time-row"><div class="time-label">19:30</div><div class="time-text">Dinner area suggestion: Ueno / Okachimachi.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">18</div><div class="day-weekday">Fri</div></div>
+              <div class="day-content">
+                <div class="day-location">Kamakura Day Trip</div>
+                <div class="day-detail">Classic first-time coastal/temple day.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Kamakura+Japan" target="_blank">Kamakura 📍</a></span>
+                  <span class="day-chip chip-flight">Pack for Kyoto</span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">08:00</div><div class="time-text">Depart Asakusa to Kamakura (~1h 20m incl. transfer).</div></div>
+            <div class="time-row"><div class="time-label">10:00</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/K%C5%8Dtoku-in" target="_blank">Kotoku-in Great Buddha (Wiki)</a>.</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text">Hase / Komachi street walk.</div></div>
+            <div class="time-row"><div class="time-label">16:30</div><div class="time-text">Return to Tokyo early to prep luggage for Shinkansen.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Asakusa station side.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">19</div><div class="day-weekday">Sat</div></div>
+              <div class="day-content">
+                <div class="day-location">Tokyo → Kyoto</div>
+                <div class="day-detail">Clean transfer day + dusk shrine visit.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-flight">Shinkansen</span>
+                  <span class="day-chip chip-hotel">Henn na check-in</span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Fushimi+Inari+Taisha+Kyoto" target="_blank">Fushimi Inari 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">10:00</div><div class="time-text">Checkout Tokyo hotel and go to Tokyo Station.</div></div>
+            <div class="time-row"><div class="time-label">11:30</div><div class="time-text">Nozomi Shinkansen to Kyoto (~2h15).</div></div>
+            <div class="time-row"><div class="time-label">14:30</div><div class="time-text">Drop bags at <a class="map-link" href="https://maps.google.com/?q=Henn+na+Hotel+Kyoto+Gojo+Karasuma" target="_blank">Kyoto hotel 📍</a>.</div></div>
+            <div class="time-row"><div class="time-label">17:00</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Fushimi_Inari-taisha" target="_blank">Fushimi Inari (Wiki)</a> at dusk.</div></div>
+            <div class="time-row"><div class="time-label">20:00</div><div class="time-text">Dinner area suggestion: Kyoto Station / Gojo-Karasuma.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">20</div><div class="day-weekday">Sun</div></div>
+              <div class="day-content">
+                <div class="day-location">Kyoto NW Arc</div>
+                <div class="day-detail">Arashiyama + Kinkaku-ji cluster.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Arashiyama+Bamboo+Grove" target="_blank">Arashiyama 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Kinkakuji+Kyoto" target="_blank">Kinkaku-ji 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">07:00</div><div class="time-text">Early train to Arashiyama bamboo grove (crowd control).</div></div>
+            <div class="time-row"><div class="time-label">10:30</div><div class="time-text">Move to <a class="map-link" href="https://en.wikipedia.org/wiki/Kinkaku-ji" target="_blank">Kinkaku-ji (Wiki)</a>.</div></div>
+            <div class="time-row"><div class="time-label">12:00</div><div class="time-text">Ryoan-ji quick add-on if energy is good.</div></div>
+            <div class="time-row"><div class="time-label">16:30</div><div class="time-text">Return via Karasuma line to hotel zone.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Pontocho / Kawaramachi.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">21</div><div class="day-weekday">Mon</div></div>
+              <div class="day-content">
+                <div class="day-location">Kyoto East + Central</div>
+                <div class="day-detail">Nishiki, Higashiyama, Gion in one line.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Nishiki+Market+Kyoto" target="_blank">Nishiki 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Gion+Kyoto" target="_blank">Gion 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">09:30</div><div class="time-text">Start at Nishiki Market lanes.</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text">Walk toward Higashiyama slopes / temple streets.</div></div>
+            <div class="time-row"><div class="time-label">16:30</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Gion" target="_blank">Gion (Wiki)</a> and Hanamikoji at dusk.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Gion / Kiyamachi.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">22</div><div class="day-weekday">Tue</div></div>
+              <div class="day-content">
+                <div class="day-location">Nara Day Trip</div>
+                <div class="day-detail">Classic first-time Nara circuit.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Todaiji+Temple+Nara" target="_blank">Todai-ji 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Nara+Park" target="_blank">Nara Park 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">08:30</div><div class="time-text">JR Kyoto to Nara (~45 min).</div></div>
+            <div class="time-row"><div class="time-label">10:00</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/T%C5%8Ddai-ji" target="_blank">Todai-ji (Wiki)</a> + Great Buddha hall.</div></div>
+            <div class="time-row"><div class="time-label">12:30</div><div class="time-text">Nara Park and nearby garden/streets.</div></div>
+            <div class="time-row"><div class="time-label">17:00</div><div class="time-text">Return Kyoto before rush.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Kyoto Station / Gojo corridor.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">23</div><div class="day-weekday">Wed</div></div>
+              <div class="day-content">
+                <div class="day-location">Uji Half-Day + Kyoto Evening</div>
+                <div class="day-detail">Short transit, low effort, tea culture focus.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Byodo-in+Temple+Uji" target="_blank">Byodoin 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Uji+Kyoto" target="_blank">Uji 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">09:30</div><div class="time-text">JR to Uji (~20 min).</div></div>
+            <div class="time-row"><div class="time-label">10:30</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/By%C5%8Dd%C5%8D-in" target="_blank">Byodoin (Wiki)</a> and tea streets.</div></div>
+            <div class="time-row"><div class="time-label">14:30</div><div class="time-text">Return to Kyoto; rest / laundry block.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Sanjo / Kawaramachi.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">24</div><div class="day-weekday">Thu</div></div>
+              <div class="day-content">
+                <div class="day-location">Kyoto Buffer + Kiyomizu</div>
+                <div class="day-detail">Flexible recovery day with core first-time backup.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Kiyomizu-dera+Kyoto" target="_blank">Kiyomizu-dera 📍</a></span>
+                  <span class="day-chip chip-activity">Buffer day</span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">09:30</div><div class="time-text">Slow morning; use for weather swap if needed.</div></div>
+            <div class="time-row"><div class="time-label">11:30</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Kiyomizu-dera" target="_blank">Kiyomizu-dera (Wiki)</a> + Sannenzaka/Ninenzaka lanes.</div></div>
+            <div class="time-row"><div class="time-label">16:00</div><div class="time-text">Pack and prep transfer to Osaka.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Higashiyama / Gion.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">25</div><div class="day-weekday">Fri</div></div>
+              <div class="day-content">
+                <div class="day-location">Kyoto → Osaka</div>
+                <div class="day-detail">Short transfer, then Osaka night orientation.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-hotel">WELLSTAY check-in</span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Dotonbori+Osaka" target="_blank">Dotonbori 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">11:00</div><div class="time-text">Checkout Kyoto hotel, JR to Osaka (~15 min).</div></div>
+            <div class="time-row"><div class="time-label">14:30</div><div class="time-text">Drop bags/check-in near <a class="map-link" href="https://maps.google.com/?q=WELLSTAY+Shinsekai+Wakyo+Osaka" target="_blank">WELLSTAY 📍</a>.</div></div>
+            <div class="time-row"><div class="time-label">17:30</div><div class="time-text">Shinsekai warm-up walk.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Dotonbori / Namba.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">26</div><div class="day-weekday">Sat</div></div>
+              <div class="day-content">
+                <div class="day-location">Osaka Core Day</div>
+                <div class="day-detail">Castle, market, and nightlife zones in order.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Osaka+Castle" target="_blank">Osaka Castle 📍</a></span>
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Kuromon+Market+Osaka" target="_blank">Kuromon 📍</a></span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">09:00</div><div class="time-text"><a class="map-link" href="https://en.wikipedia.org/wiki/Osaka_Castle" target="_blank">Osaka Castle (Wiki)</a> + park.</div></div>
+            <div class="time-row"><div class="time-label">13:00</div><div class="time-text">Kuromon market pass.</div></div>
+            <div class="time-row"><div class="time-label">16:30</div><div class="time-text">Namba pedestrian zone and canal area.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Namba / Shinsaibashi.</div></div>
+          </div>
+        </details>
+
+        <details class="plan-day">
+          <summary>
+            <div class="day-item">
+              <div class="day-marker"><div class="day-num">27</div><div class="day-weekday">Sun</div></div>
+              <div class="day-content">
+                <div class="day-location">Kobe Day Trip</div>
+                <div class="day-detail">Easy JR day trip and return for departure prep.</div>
+                <div class="day-hotels">
+                  <span class="day-chip chip-activity"><a class="map-link" href="https://maps.google.com/?q=Kobe+Japan" target="_blank">Kobe 📍</a></span>
+                  <span class="day-chip chip-flight">Prep VN335 docs</span>
+                </div>
+              </div>
+              <span class="day-toggle">›</span>
+            </div>
+          </summary>
+          <div class="day-timeline">
+            <div class="time-row"><div class="time-label">09:00</div><div class="time-text">JR Osaka → Kobe (~30 min).</div></div>
+            <div class="time-row"><div class="time-label">10:30</div><div class="time-text">Port + Kitano area (<a class="map-link" href="https://en.wikipedia.org/wiki/Kobe" target="_blank">Kobe Wiki</a>).</div></div>
+            <div class="time-row"><div class="time-label">16:30</div><div class="time-text">Return Osaka; final bag check for KIX departure.</div></div>
+            <div class="time-row"><div class="time-label">19:00</div><div class="time-text">Dinner area suggestion: Tennoji / Shinsekai (easy airport morning).</div></div>
+          </div>
+        </details>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">28</div><div class="day-weekday">Mon</div></div>
+          <div class="day-content">
+            <div class="day-location">Osaka → Hanoi</div>
+            <div class="day-detail">Checkout + airport transfer morning, VN335 to Hanoi, then transit-hotel recovery block before overnight departure.</div>
+            <div class="day-hotels">
+              <span class="day-chip chip-flight">VN335 KIX→HAN 10:00 ❌</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="day-item">
+          <div class="day-marker"><div class="day-num">29</div><div class="day-weekday">Tue</div></div>
+          <div class="day-content">
+            <div class="day-location">Hanoi → Amsterdam 🏠</div>
+            <div class="day-detail">Late-night airport return for VN83 (03:50), arrive AMS 11:00, then direct train handoff home.</div>
+            <div class="day-hotels">
+              <span class="day-chip chip-flight">VN83 03:50→AMS 11:00 ❌</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end asia-plan -->
+
+      <!-- Asia info -->
+      <div class="section-view" id="asia-info">
+
+        <div class="section-label">Visa</div>
+        <div class="card">
+          <div class="visa-row">
+            <div class="visa-flag">🇲🇾</div>
+            <div class="visa-country">Malaysia</div>
+            <div class="visa-status">✅ Visa-free 90 days</div>
+          </div>
+          <div class="visa-row">
+            <div class="visa-flag">🇮🇩</div>
+            <div class="visa-country">Indonesia</div>
+            <div class="visa-status">✅ Visa-free 30 days</div>
+          </div>
+          <div class="visa-row">
+            <div class="visa-flag">🇯🇵</div>
+            <div class="visa-country">Japan</div>
+            <div class="visa-status">✅ Visa-free 90 days</div>
+          </div>
+          <div class="visa-row">
+            <div class="visa-flag">🇻🇳</div>
+            <div class="visa-country">Vietnam (transit)</div>
+            <div class="visa-status">✅ Visa-free 45 days (since Aug 2023)</div>
+          </div>
+        </div>
+
+        <div class="section-label">Practical · Japan</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Currency</span>
+            <span class="info-value">JPY · ~€1 = ¥165</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Suica IC card</span>
+            <span class="info-value">Get at Narita on arrival · load ¥5,000–10,000</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ATM</span>
+            <span class="info-value">7-Eleven ATMs accept foreign cards</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tipping</span>
+            <span class="info-value">Never — considered rude</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Power</span>
+            <span class="info-value">Type A (US-style) · no adapter if NL</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Weather</span>
+            <span class="info-value">~27–30°C Sep · typhoon season</span>
+          </div>
+        </div>
+
+        <div class="section-label">Narita → Tokyo</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">N'EX</span>
+            <span class="info-value">Narita Express → Shinjuku, then metro to Asakusa</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Duration</span>
+            <span class="info-value">~90 min · ~¥3,000pp</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Hotel from station</span>
+            <span class="info-value">Asakusa 2-12-4, Taito — metro Asakusa line</span>
+          </div>
+        </div>
+
+        <div class="section-label">Food · Vegetarian Japan</div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <span>🍱 Key phrases + food types</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Key phrase</span>
+            <span class="info-value mono" style="font-size:11px;">niku to gyokai nashi de<br>肉と魚介なしで (no meat/seafood)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Shojin ryori</span>
+            <span class="info-value">Buddhist veg cuisine — near temples <span class="veg-tag">🌿</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Yudofu</span>
+            <span class="info-value">Tofu hot pot — Kyoto specialty <span class="veg-tag">🌿</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Okonomiyaki</span>
+            <span class="info-value">Can be made veg — specify</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Kushikatsu</span>
+            <span class="info-value">Veg skewers (tofu, onion, shiitake) <span class="veg-tag">🌿</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Nishiki Market (Kyoto)</span>
+            <span class="info-value">Pickles, tofu, grilled mochi <span class="veg-tag">🌿</span></span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Convenience stores</span>
+            <span class="info-value">Inari sushi, onigiri (check filling)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Search terms (JP)</span>
+            <span class="info-value mono" style="font-size:11px;">精進料理 · ベジタリアン · ヴィーガン</span>
+          </div>
+        </div>
+
+        <div class="section-label">Destinations</div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <span>🗼 Tokyo</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Senso-ji</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Sensoji+Temple+Tokyo" target="_blank">Map 📍</a> · go early</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Shibuya Sky</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Shibuya+Sky+Observatory" target="_blank">Map 📍</a> · ~¥2,000, book ahead</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">TeamLab Planets</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=teamLab+Planets+Toyosu+Tokyo" target="_blank">Map 📍</a> · ~¥3,200, MUST pre-book</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Golden Gai</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Golden+Gai+Shinjuku" target="_blank">Map 📍</a> · tiny bar alley, evening</span>
+          </div>
+        </div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)" style="margin-top:2px;">
+          <span>⛩️ Kyoto</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Fushimi Inari</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Fushimi+Inari+Taisha+Kyoto" target="_blank">Map 📍</a> · free · go at dusk Sep 19</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Kinkaku-ji</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Kinkakuji+Kyoto" target="_blank">Map 📍</a> · ~¥500 · MUST pre-book timed entry</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Arashiyama</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Arashiyama+Bamboo+Grove" target="_blank">Map 📍</a> · go at 07:00</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Gion</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Gion+Kyoto" target="_blank">Map 📍</a> · evening walk</span>
+          </div>
+        </div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)" style="margin-top:2px;">
+          <span>🦑 Osaka</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Dotonbori</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Dotonbori+Osaka" target="_blank">Map 📍</a> · must go at night</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Shinsekai</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Shinsekai+Osaka" target="_blank">Map 📍</a> · right by hotel, cheap kushikatsu</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Osaka Castle</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Osaka+Castle" target="_blank">Map 📍</a> · ~¥600pp</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Kuromon Market</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Kuromon+Market+Osaka" target="_blank">Map 📍</a> · tofu, pickles, street food</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">KIX from Osaka</span>
+            <span class="info-value">Tennoji → JR Haruka → KIX · ~45 min</span>
+          </div>
+        </div>
+
+      </div><!-- end asia-info -->
+
+      <!-- Asia culture -->
+      <div class="section-view" id="asia-culture">
+
+        <div class="section-label">First-Time Asia Essentials</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Respect baseline</span>
+            <span class="info-value">Polite tone + patience is valued everywhere on this route.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Shoes</span>
+            <span class="info-value">Be ready to remove shoes at temples and some indoor spaces.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Cash + card</span>
+            <span class="info-value">Cards work in cities, but small cash is still essential.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Heat + humidity</span>
+            <span class="info-value">Hydrate more than usual. Midday heat can drain energy fast.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Transport etiquette</span>
+            <span class="info-value">Keep voice low on trains, queue neatly, avoid blocking doors.</span>
+          </div>
+        </div>
+
+        <div class="section-label">Key Phrases</div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+          <span>🇯🇵 Japan</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Hello</span>
+            <span class="info-value mono">Konnichiwa</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Thank you</span>
+            <span class="info-value mono">Arigatou gozaimasu</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Excuse me</span>
+            <span class="info-value mono">Sumimasen</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">No meat/seafood</span>
+            <span class="info-value mono">Niku to gyokai nashi de</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Where is...?</span>
+            <span class="info-value mono">...wa doko desu ka?</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Bill please</span>
+            <span class="info-value mono">Okaikei onegaishimasu</span>
+          </div>
+        </div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)" style="margin-top:2px;">
+          <span>🇮🇩 Indonesia</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Hello</span>
+            <span class="info-value mono">Halo / Selamat pagi</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Thank you</span>
+            <span class="info-value mono">Terima kasih</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Sorry</span>
+            <span class="info-value mono">Maaf</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">How much?</span>
+            <span class="info-value mono">Berapa?</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">No spicy</span>
+            <span class="info-value mono">Tidak pedas</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Where is the toilet?</span>
+            <span class="info-value mono">Di mana toilet?</span>
+          </div>
+        </div>
+
+        <div class="collapsible-header" onclick="toggleCollapsible(this)" style="margin-top:2px;">
+          <span>🇻🇳 Vietnam (Transit)</span>
+          <span class="chevron">›</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="info-row">
+            <span class="info-label">Hello</span>
+            <span class="info-value mono">Xin chào</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Thank you</span>
+            <span class="info-value mono">Cảm ơn</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Excuse me</span>
+            <span class="info-value mono">Xin lỗi</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Gate?</span>
+            <span class="info-value mono">Cổng ở đâu?</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Airport basics</span>
+            <span class="info-value">Keep transit docs ready and screen departure gate often.</span>
+          </div>
+        </div>
+
+        <div class="section-label">Day-to-Day Etiquette</div>
+        <div class="card">
+          <div class="info-row">
+            <span class="info-label">Dining rhythm</span>
+            <span class="info-value">Japan can have queue culture; Indonesia is more flexible but still polite-first.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Temple + mosque</span>
+            <span class="info-value">Cover shoulders/knees for religious sites and follow shoe rules at the entrance.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Transit manners</span>
+            <span class="info-value">Stand to one side on escalators, keep bags close, and let passengers exit first.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Payments</span>
+            <span class="info-value">Always keep small cash for markets, local rides, and food stalls even with cards.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Public tone</span>
+            <span class="info-value">Lower volume in trains/indoor lines, especially in Japan and airport transit zones.</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Transit layovers</span>
+            <span class="info-value">For Hanoi transit, recheck gate screens often because gate changes happen close to boarding.</span>
+          </div>
+        </div>
+
+      </div><!-- end asia-culture -->
+
+    </div><!-- end trip-asia -->
+
+  </div><!-- end content-area -->
+
+  <!-- Bottom navigation -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="nav-btn active" id="nav-home" onclick="selectSection('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Overview
+    </button>
+    <button class="nav-btn" id="nav-bookings" onclick="selectSection('bookings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      Bookings
+    </button>
+    <button class="nav-btn" id="nav-plan" onclick="selectSection('plan')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      Plan
+    </button>
+    <button class="nav-btn" id="nav-info" onclick="selectSection('info')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Info
+    </button>
+    <button class="nav-btn" id="nav-culture" onclick="selectSection('culture')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M12 3v18"/>
+        <path d="M5 7h7a3 3 0 0 1 3 3v11"/>
+        <path d="M19 7h-7a3 3 0 0 0-3 3v11"/>
+      </svg>
+      Culture
+    </button>
+  </nav>
+
+</div><!-- end app -->
+
+<script type="module">
+// ── Inlined Pretext ──────────────────────────────
+</script>
+
+<script>
+// ── State ────────────────────────────────────────
+let currentTrip = 'albania';
+let currentSection = 'home';
+
+// ── Trip selector ────────────────────────────────
+function selectTrip(trip) {
+  currentTrip = trip;
+  document.querySelectorAll('.trip-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.trip-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('trip-' + trip).classList.add('active');
+  document.getElementById('tab-' + trip).classList.add('active');
+  // Scroll content to top
+  document.querySelector('.content-area').scrollTop = 0;
+}
+
+// ── Section nav ──────────────────────────────────
+function selectSection(section) {
+  currentSection = section;
+  // Update nav
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-' + section).classList.add('active');
+  // Switch section views in each trip panel
+  document.querySelectorAll('.section-view').forEach(v => v.classList.remove('active'));
+  // Activate the right section in BOTH panels (keep state per panel)
+  ['albania', 'asia'].forEach(trip => {
+    if (section === 'bookings') {
+      const flights = document.getElementById(trip + '-flights');
+      const hotels = document.getElementById(trip + '-hotels');
+      if (flights) flights.classList.add('active');
+      if (hotels) hotels.classList.add('active');
+      return;
+    }
+    const el = document.getElementById(trip + '-' + section);
+    if (el) el.classList.add('active');
+  });
+  // Scroll to top
+  document.querySelector('.content-area').scrollTop = 0;
+}
+
+// ── Collapsibles ─────────────────────────────────
+function toggleCollapsible(header) {
+  header.classList.toggle('open');
+  const body = header.nextElementSibling;
+  if (body) body.classList.toggle('open');
+}
+
+// ── Countdown ────────────────────────────────────
+function updateCountdowns() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const albaniaStart = new Date(2026, 4, 15); // May 15 (month is 0-indexed)
+  const asiaStart = new Date(2026, 8, 6); // Sep 6
+
+  const albaniaEl = document.getElementById('albania-days');
+  const asiaEl = document.getElementById('asia-days');
+  const albaniaBadge = document.getElementById('albania-countdown');
+  const asiaBadge = document.getElementById('asia-countdown');
+
+  const albaniaD = Math.round((albaniaStart - today) / 86400000);
+  const asiaD = Math.round((asiaStart - today) / 86400000);
+
+  albaniaEl.textContent = albaniaD >= 0 ? albaniaD : 0;
+  asiaEl.textContent = asiaD >= 0 ? asiaD : 0;
+
+  if (albaniaD <= 7) albaniaBadge.classList.add('urgent');
+  else if (albaniaD <= 30) albaniaBadge.classList.add('soon');
+
+  if (asiaD <= 7) asiaBadge.classList.add('urgent');
+  else if (asiaD <= 30) asiaBadge.classList.add('soon');
+}
+
+// ── Init ─────────────────────────────────────────
+updateCountdowns();
+</script>
+
+</body>
+</html>
