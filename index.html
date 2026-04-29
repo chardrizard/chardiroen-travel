@@ -40,6 +40,8 @@
     --radius-sm: 8px;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --nav-safe-bottom: min(var(--safe-bottom), 16px);
+    --nav-height: calc(58px + var(--nav-safe-bottom));
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -110,7 +112,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(72px + var(--safe-bottom));
+    padding-bottom: calc(var(--nav-height) + 12px);
   }
 
   /* ── Trip panels ── */
@@ -123,8 +125,8 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(56px + var(--safe-bottom));
-    padding-bottom: var(--safe-bottom);
+    height: var(--nav-height);
+    padding-bottom: var(--nav-safe-bottom);
     background: rgba(17,17,17,0.92);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -146,7 +148,7 @@
     flex-direction: column;
     align-items: center;
     gap: 3px;
-    padding: 8px 4px;
+    padding: 7px 4px 6px;
     transition: color 0.15s;
   }
 
@@ -688,7 +690,7 @@
           <div class="icon">💶</div>
           <div>
             <div class="warn-title">Bring ~€330 cash for hotels</div>
-            <div class="warn-body">Sea Horizon (Saranda) and Venere (Tirana 2) are cash only. Withdraw at Tirana airport ATM on arrival. Albanian Lek or Euros accepted.</div>
+            <div class="warn-body">Sea Horizon (Saranda) and Venere (Tirana 2) are cash only. Expect to pay in Albanian lek (ALL) at the day-of-payment rate.</div>
           </div>
         </div>
 
@@ -696,7 +698,7 @@
         <div class="section-label">Budget overview</div>
         <div class="budget-overview">
           <div class="budget-cell">
-            <div class="budget-amount">€455</div>
+            <div class="budget-amount">€456</div>
             <div class="budget-label">Hotels (confirmed)</div>
           </div>
           <div class="budget-cell">
@@ -740,7 +742,7 @@
             </div>
             <div class="todo-item">
               <div class="todo-dot low"></div>
-              <div class="todo-text">Travel insurance (both)</div>
+              <div class="todo-text">Save insurance policy PDF + emergency number offline</div>
               <div class="todo-deadline"></div>
             </div>
             <div class="todo-item">
@@ -818,7 +820,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Check-out</span>
-            <span class="info-value">17 May, by 10:00</span>
+            <span class="info-value">17 May, 10:00–11:00</span>
           </div>
           <div class="info-row">
             <span class="info-label">Address</span>
@@ -874,7 +876,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Check-out</span>
-            <span class="info-value">20 May, by 08:00</span>
+            <span class="info-value">20 May, 08:00–10:30</span>
           </div>
           <div class="info-row">
             <span class="info-label">Address</span>
@@ -919,7 +921,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Check-out</span>
-            <span class="info-value">23 May, by 08:00</span>
+            <span class="info-value">23 May, 08:00–11:00</span>
           </div>
           <div class="info-row">
             <span class="info-label">Address</span>
@@ -1501,8 +1503,8 @@
         <div class="warning-banner urgent">
           <div class="icon">🔴</div>
           <div>
-            <div class="warn-title">3 flights still unbooked</div>
-            <div class="warn-body">KUL→PNK (AirAsia), PNK→Tokyo (Batik Air), and KIX→AMS (Vietnam Airlines) need to be booked. KL hotel also unbooked (3 nights).</div>
+            <div class="warn-title">3 flights + 2 hotel gaps still open</div>
+            <div class="warn-body">KUL→PNK, PNK→Tokyo, and KIX→AMS need booking. KL hotel is unbooked, and Tokyo arrival night Sep 13 is not covered by Hotel Keihan.</div>
           </div>
         </div>
 
@@ -1518,7 +1520,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">🇯🇵 Tokyo</span>
-            <span class="info-value"><span class="status-badge status-confirmed">✅ Confirmed</span></span>
+            <span class="info-value"><span class="status-badge status-pending">Sep 14–19 confirmed · Sep 13 open</span></span>
           </div>
           <div class="info-row">
             <span class="info-label">🇯🇵 Kyoto</span>
@@ -1541,7 +1543,7 @@
             <div class="budget-label">Hotels (est.)</div>
           </div>
           <div class="budget-cell">
-            <div class="budget-amount">~€6,200</div>
+            <div class="budget-amount">~€6,340</div>
             <div class="budget-label">Total est. (2pp)</div>
           </div>
         </div>
@@ -1570,6 +1572,11 @@
               <div class="todo-deadline">Sep 7</div>
             </div>
             <div class="todo-item">
+              <div class="todo-dot urgent"></div>
+              <div class="todo-text">Cover Tokyo arrival night (Sep 13–14)</div>
+              <div class="todo-deadline">Sep 13</div>
+            </div>
+            <div class="todo-item">
               <div class="todo-dot normal"></div>
               <div class="todo-text">Book Hanoi transit hotel (~15h layover)</div>
               <div class="todo-deadline">Sep 28</div>
@@ -1586,7 +1593,7 @@
             </div>
             <div class="todo-item">
               <div class="todo-dot normal"></div>
-              <div class="todo-text">Book Kinkaku-ji Kyoto (mandatory timed entry)</div>
+              <div class="todo-text">Keep cash ready for Kinkaku-ji entry</div>
               <div class="todo-deadline"></div>
             </div>
             <div class="todo-item">
@@ -1774,7 +1781,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Cost</span>
-            <span class="info-value">~¥16,000pp (~€100)</span>
+            <span class="info-value">~¥16,000pp (~€100pp / ~€194 for 2)</span>
           </div>
           <div class="info-row">
             <span class="info-label">Seat strategy</span>
@@ -1857,6 +1864,10 @@
             <span class="info-value">10 Sep</span>
           </div>
           <div class="info-row">
+            <span class="info-label">Payment</span>
+            <span class="info-value">Card scheduled 9 Sep · ¥78,919</span>
+          </div>
+          <div class="info-row">
             <span class="info-label">Note</span>
             <span class="info-value">Arrive Tokyo 13 Sep evening — check-in 14 Sep</span>
           </div>
@@ -1905,6 +1916,10 @@
             <span class="info-value">17 Sep (typhoon buffer)</span>
           </div>
           <div class="info-row">
+            <span class="info-label">Payment</span>
+            <span class="info-value">Card scheduled 16 Sep · ¥97,892 · city tax paid locally</span>
+          </div>
+          <div class="info-row">
             <span class="info-label">Booking ref</span>
             <span class="info-value mono">6751736315</span>
           </div>
@@ -1947,6 +1962,10 @@
           <div class="info-row">
             <span class="info-label">Free cancel until</span>
             <span class="info-value">23 Sep</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Payment</span>
+            <span class="info-value">Card scheduled 22 Sep · ¥43,570</span>
           </div>
           <div class="info-row">
             <span class="info-label">Booking ref</span>
@@ -2603,7 +2622,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Kinkaku-ji</span>
-            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Kinkakuji+Kyoto" target="_blank">Map 📍</a> · ~¥500 · MUST pre-book timed entry</span>
+            <span class="info-value"><a class="map-link" href="https://maps.google.com/?q=Kinkakuji+Kyoto" target="_blank">Map 📍</a> · ~¥500 · pay on entry</span>
           </div>
           <div class="info-row">
             <span class="info-label">Arashiyama</span>
