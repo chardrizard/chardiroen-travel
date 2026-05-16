@@ -1,4 +1,4 @@
-const CACHE_NAME = "chardiroen-travel-v4";
+const CACHE_NAME = "chardiroen-travel-v5";
 const ASSETS = [
   "./",
   "./index.html",
